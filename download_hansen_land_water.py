@@ -15,7 +15,7 @@ from gauss_kruger import local_geogauss
 import requests
 
 
-for corner_lat in range(-50,-5,10):
+for corner_lat in range(0,5,10):
     for corner_lon in range(0,351,10):
 
         if corner_lat >= 0:
