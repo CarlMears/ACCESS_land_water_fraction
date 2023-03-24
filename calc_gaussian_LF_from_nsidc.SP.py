@@ -54,7 +54,7 @@ if __name__ == '__main__':
     from EASE2_grid_land_mask import read_EASE2_grid_land_mask
     from EASE2_grid import read_EASE2_grid_locations
 
-    footprint_diameter_km = 30.0
+    footprint_diameter_km = 70.0
 
     weight_map = np.zeros((721,1440))
     weight_map[0:41,:] = 1.0
@@ -116,7 +116,7 @@ if __name__ == '__main__':
                                 }
                             )
 
-        nc_file = 'L:/access/land_water/land_fraction_1440_721_30km.from_nsidc_3km_mask.south.v3.nc'
+        nc_file = f'L:/access/land_water/land_fraction_1440_721_{int(footprint_diameter_km)}km.from_nsidc_3km_mask.south.v3.nc'
         encoding = {"land_fraction":{'zlib' : True, 'complevel': 4 }}
         land_mask_DS.to_netcdf(nc_file,encoding=encoding)   
         print(f'Finished Lat = {latitude0}') 

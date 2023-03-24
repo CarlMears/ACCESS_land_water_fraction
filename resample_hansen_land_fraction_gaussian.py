@@ -78,7 +78,7 @@ if __name__ == '__main__':
     plt_north = True
 
     if restart:
-        nc_file = f'L:/access/land_water/land_fraction_1440_721_{int(footprint_diameter_km)}km.v3.nc'
+        nc_file = f'L:/access/land_water/land_fraction_1440_721_{int(footprint_diameter_km)}km.from_hansen.nc'
         land_mask_DS=xr.open_dataset(nc_file)  
         weight_map = land_mask_DS['land_fraction'].values
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
             lon_index = int(np.round(longitude0/0.25))
             longitude0_radians = np.deg2rad(longitude0)
 
-            if abs(latitude0) > 75.0:
+            if((latitude0 > 75.0) or (latitude0 < -57.0)):
                 weight_map[lat_index,lon_index] = np.nan
                 continue
 
@@ -152,10 +152,10 @@ if __name__ == '__main__':
                     nc_land_fraction_file = find_Hansen_land_mask_filename(corner_lat=corner_lat,corner_lon=corner_lon)
                     
                     try:
-                        ds = xr.open_dataset(nc_land_fraction_file)
-                        land_frac_temp = ds.land_fraction.values
-                        land_frac_lons_temp = ds.Longitude.values
-                        land_frac_lats_temp = ds.Latitude.values
+                        with xr.open_dataset(nc_land_fraction_file) as ds:
+                            land_frac_temp = ds.land_fraction.values
+                            land_frac_lons_temp = ds.Longitude.values
+                            land_frac_lats_temp = ds.Latitude.values
                     except FileNotFoundError:
 
                         land_frac_temp = np.zeros((num_lats,num_lons))
@@ -269,7 +269,7 @@ if __name__ == '__main__':
                 
             else:
                 #if the whole submask is 0.0, don't bother with calculations.
-                print(f"lat = {latitude0}, lon = {longitude0}, Gaussian Weighted Land Fraction = 0.0")
+                #print(f"lat = {latitude0}, lon = {longitude0}, Gaussian Weighted Land Fraction = 0.0")
                 weight_map[lat_index,lon_index] = 0.0
 
         lon_array = np.arange(0.0,360.0,0.25)
@@ -284,7 +284,7 @@ if __name__ == '__main__':
                                 }
                             )
 
-        nc_file = f'L:/access/land_water/land_fraction_1440_721_{int(footprint_diameter_km)}km.v3.nc'
+        nc_file = f'L:/access/land_water/land_fraction_1440_721_{int(footprint_diameter_km)}km.from_hansen.nc'
         encoding = {"land_fraction":{'zlib' : True, 'complevel': 4 }}
         land_mask_DS.to_netcdf(nc_file,encoding=encoding)   
         print(f'Finished Lat = {latitude0}') 

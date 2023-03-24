@@ -1,15 +1,16 @@
 
 import numpy as np 
+import os
 import xarray as xr
 import matplotlib.pyplot as plt
 
-
-from libtiff import TIFF
 import pyproj as proj
+from pyproj import Geod
 import warnings
 
 import sys
 sys.path.append("m:/job_access/python/resample_wts/AMSR2")  #contains the target footprint pattern code
+sys.path.append("/mnt/ops1p-ren/m/job_access/python/resample_wts/AMSR2")  #contains the target footprint pattern code
 from AMSR2_Antenna_Gain import target_gain
 
 
@@ -34,6 +35,14 @@ def calc_footprint_LF_from_nsidc_3km(*,lat,lon,land,grid_lats,grid_lons,diameter
         xv = xv/1000.0
 
         dist_from_center = np.sqrt(np.square(xv) + np.square(yv))
+
+        # g = Geod(ellps='WGS84')
+        # n = len(grid_lats)
+        # lons = np.full((n),lon)
+        # lats = np.full((n),lat)
+        # dist_from_center2 = g.inv(lons,lats,grid_lons,grid_lats)[2]/1000.0
+
+
         footprint_amplitude = target_gain(dist_from_center,diameter_in_km = diameter_in_km)
         
         #since these are from the EASE 2.0 grid, the cell sizes should be very close to the same,
@@ -50,7 +59,7 @@ if __name__ == '__main__':
     from EASE2_grid_land_mask import read_EASE2_grid_land_mask
     from EASE2_grid import read_EASE2_grid_locations
 
-    footprint_diameter_km = 30.0
+    footprint_diameter_km = 70.0
 
     weight_map = np.zeros((721,1440))
 
@@ -82,19 +91,26 @@ if __name__ == '__main__':
                                 np.any([(np.abs(dlon) < np.deg2rad(max_lon_diff)),
                                         (np.abs(dlon) > np.deg2rad(360.0-max_lon_diff))],
                         axis=0)],axis=0)
+
+            ok1 = np.abs(dlat) < np.deg2rad(max_lat_diff)
+
+            ok2 = np.any([(np.abs(dlon[ok1]) < np.deg2rad(max_lon_diff)),
+                          (np.abs(dlon[ok1]) > np.deg2rad(360.0-max_lon_diff))],
+                        axis=0)
+
             
             #better guess based on haversine formula
-            a = np.square(np.sin(dlat[ok1]/2.0)) + np.cos(latitude0_radians)*np.cos(lats_radians[ok1])*np.square(np.sin(dlon[ok1]/2.0))
+            a = np.square(np.sin((dlat[ok1][ok2])/2.0)) + np.cos(latitude0_radians)*np.cos((lats_radians[ok1][ok2]))*np.square(np.sin((dlon[ok1][ok2])/2.0))
             dist_approx = 6371*(2.0*np.arctan2(np.sqrt(a),np.sqrt(1.0-a)))
-            ok2 = dist_approx <= 3.0*footprint_diameter_km
+            ok3 = dist_approx <= 3.0*footprint_diameter_km
 
             # pass land_present, grid_lat and grid lon arrays selected by both ok1 and ok2
 
             wt = calc_footprint_LF_from_nsidc_3km(lat = latitude0,
                                                  lon =  longitude0,
-                                                 land = land_present[ok1][ok2],
-                                                 grid_lats = lats[ok1][ok2],
-                                                 grid_lons = lons[ok1][ok2],
+                                                 land = land_present[ok1][ok2][ok3],
+                                                 grid_lats = lats[ok1][ok2][ok3],
+                                                 grid_lons = lons[ok1][ok2][ok3],
                                                  diameter_in_km = footprint_diameter_km)
 
             weight_map[ilat,ilon] = wt
@@ -113,7 +129,7 @@ if __name__ == '__main__':
                                 }
                             )
 
-        nc_file = 'L:/access/land_water/land_fraction_1440_721_30km.from_nsidc_3km_mask.north.v4.nc'
+        nc_file = 'L:/access/land_water/land_fraction_1440_721_70km.from_nsidc_3km_mask.north.v4.nc'
         encoding = {"land_fraction":{'zlib' : True, 'complevel': 4 }}
         land_mask_DS.to_netcdf(nc_file,encoding=encoding)   
         print(f'Finished Lat = {latitude0}') 

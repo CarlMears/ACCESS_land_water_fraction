@@ -1,6 +1,12 @@
+import os
+if os.name == 'nt':
+    grid_root = 'l:/access/nsidc_grids/'
+elif os.name == 'posix':
+    grid_root = '/mnt/ops1p-ren/l/access/nsidc_grids/'
+else:
+    raise ValueError
 
-
-def read_EASE2_grid_locations(*,resolution,pole,grid_root = 'L:/access/nsidc_grids/',verbose=False):
+def read_EASE2_grid_locations(*,resolution,pole,grid_root = grid_root,verbose=False):
 
     import numpy as np 
 

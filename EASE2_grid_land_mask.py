@@ -1,5 +1,12 @@
+import os
+if os.name == 'nt':
+    land_mask_root = 'L:/access/nsidc_land_masks/'
+elif os.name == 'posix':
+    land_mask_root = '/mnt/ops1p-ren/l/access/nsidc_land_masks/'
+else:
+    raise ValueError
 
-def read_EASE2_grid_land_mask(*,resolution,pole,land_mask_root = 'L:/access/nsidc_land_masks/',verbose=False,convert_ice=True):
+def read_EASE2_grid_land_mask(*,resolution,pole,land_mask_root = land_mask_root,verbose=False,convert_ice=True):
 
     import numpy as np 
 
