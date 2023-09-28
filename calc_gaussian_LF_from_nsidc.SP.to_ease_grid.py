@@ -15,7 +15,6 @@ sys.path.append("m:/job_access/python/resample_wts/AMSR2")  #contains the target
 sys.path.append("/mnt/ops1p-ren/m/job_access/python/resample_wts/AMSR2")  #contains the target footprint pattern code
 from AMSR2_Antenna_Gain import target_gain
 
-
 warnings.filterwarnings('ignore')
 #turn off the warnings for proj
 
@@ -63,6 +62,20 @@ if __name__ == '__main__':
     from EASE2_grid import read_EASE2_grid_locations
 
     footprint_diameter_km = 70.0
+    footprint_diameter_km_int = int(footprint_diameter_km)
+    pole = 'south'
+
+    if os.name == 'nt':
+        nc_file = f'L:/access/land_water/land_fraction_1440_721_{footprint_diameter_km_int}km.from_nsidc_3km_mask.{pole}.ease25.v5.nc'
+    elif  os.name == 'posix':
+        nc_file = f'/mnt/ops1p-ren/l/access/land_water/land_fraction_1440_721_{footprint_diameter_km_int}km.from_nsidc_3km_mask.{pole}.ease25.v5.nc'
+    else:
+        raise ValueError
+    
+    print(f'Calculating land fraction for {pole} pole')
+    print(f'Footprint Diameter km: {footprint_diameter_km}')
+    print(f'Results will be written to {nc_file}')
+    
 
     weight_map = np.zeros((720,720),dtype=np.float32)
 
@@ -71,13 +84,13 @@ if __name__ == '__main__':
     #     land_mask_DS=xr.open_dataset(nc_file)  
     #     weight_map = land_mask_DS['land_fraction'].values
 
-    lats,lons = read_EASE2_grid_locations(resolution=3,pole='south')
+    lats,lons = read_EASE2_grid_locations(resolution=3,pole=pole)
     lats_radians = np.deg2rad(lats)
     lons_radians = np.deg2rad(lons)
 
-    land_present = read_EASE2_grid_land_mask(resolution=3,pole='south',convert_ice=True)
+    land_present = read_EASE2_grid_land_mask(resolution=3,pole=pole,convert_ice=True)
 
-    lats_25,lons_25 = read_EASE2_grid_locations(resolution=25,pole='south')
+    lats_25,lons_25 = read_EASE2_grid_locations(resolution=25,pole=pole)
 
     lats_25 = lats_25.astype(np.float32)
     lons_25 = lons_25.astype(np.float32)
@@ -95,15 +108,15 @@ if __name__ == '__main__':
                 dlon = lons_radians - longitude0_radians
 
                 #first guess based on delta_lat,delta_lon
-                max_lat_diff = 2.0
+                max_lat_diff = 1.0
                 max_lon_diff = max_lat_diff/np.cos(latitude0_radians)
-                ok1 = np.all([(np.abs(dlat) < np.deg2rad(max_lat_diff)),
-                                    np.any([(np.abs(dlon) < np.deg2rad(max_lon_diff)),
-                                            (np.abs(dlon) > np.deg2rad(360.0-max_lon_diff))],
-                            axis=0)],axis=0)
+                # ok1 = np.all([(np.abs(dlat) < np.deg2rad(max_lat_diff)),
+                #                     np.any([(np.abs(dlon) < np.deg2rad(max_lon_diff)),
+                #                             (np.abs(dlon) > np.deg2rad(360.0-max_lon_diff))],
+                #             axis=0)],axis=0)
 
                 ok1 = np.abs(dlat) < np.deg2rad(max_lat_diff)
-
+                print(np.sum(ok1))
                 ok2 = np.any([(np.abs(dlon[ok1]) < np.deg2rad(max_lon_diff)),
                             (np.abs(dlon[ok1]) > np.deg2rad(360.0-max_lon_diff))],
                             axis=0)
@@ -112,7 +125,7 @@ if __name__ == '__main__':
                 #better guess based on haversine formula
                 a = np.square(np.sin((dlat[ok1][ok2])/2.0)) + np.cos(latitude0_radians)*np.cos((lats_radians[ok1][ok2]))*np.square(np.sin((dlon[ok1][ok2])/2.0))
                 dist_approx = 6371*(2.0*np.arctan2(np.sqrt(a),np.sqrt(1.0-a)))
-                ok3 = dist_approx <= 3.0*footprint_diameter_km
+                ok3 = dist_approx <= 2.0*footprint_diameter_km
 
                 print(np.sum(ok1),np.sum(ok2),np.sum(ok3),np.max(dist_approx))
                 # pass land_present, grid_lat and grid lon arrays selected by both ok1 and ok2
@@ -141,13 +154,8 @@ if __name__ == '__main__':
                                 "X":ix_array,
                                 }
                             )
-
-        if os.name == 'nt':
-            nc_file = 'L:/access/land_water/land_fraction_1440_721_70km.from_nsidc_3km_mask.south.ease25.v5.nc'
-        elif  os.name == 'posix':
-            nc_file = '/mnt/ops1p-ren/l/access/land_water/land_fraction_1440_721_70km.from_nsidc_3km_mask.south.ease25.v5.nc'
-        else:
-            raise ValueError
+        
+        
         
         encoding = {"land_fraction":{'zlib' : True, 'complevel': 4 }}
         land_mask_DS.to_netcdf(nc_file,encoding=encoding)   
